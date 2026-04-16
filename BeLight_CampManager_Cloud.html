@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Be Light 營會進度管理系統</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js"></script>
+  <style>
+    * {
+      font-family: 'Fredoka', sans-serif !important;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    .belight-bg {
+      background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0d1b2a 100%);
+      min-height: 100vh;
+      padding: 1.5rem;
+      color: #fff;
+    }
+    
+    .pikmin-card {
+      background: rgba(20, 25, 50, 0.6);
+      border-radius: 24px;
+      border: 2px solid;
+      padding: 1.5rem;
+      box-shadow: 0 4px 20px rgba(100, 200, 255, 0.1);
+      backdrop-filter: blur(10px);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .pikmin-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 30px rgba(100, 200, 255, 0.2);
+    }
+    
+    .dept-card {
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .dept-card::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(100, 200, 255, 0.1) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    
+    .dept-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+      display: inline-block;
+    }
+    
+    .link-section {
+      display: flex;
+      gap: 8px;
+      margin-top: 1rem;
+      flex-wrap: wrap;
+    }
+    
+    .doc-link {
+      background: rgba(100, 200, 255, 0.1);
+      border: 2px solid;
+      border-radius: 12px;
+      padding: 8px 12px;
+      font-size: 13px;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 500;
+      color: #64C8FF;
+    }
+    
+    .doc-link:hover {
+      transform: scale(1.05);
+      background: rgba(100, 200, 255, 0.2);
+    }
+    
+    .header-title {
+      font-size: 32px;
+      font-weight: 600;
+      margin: 0 0 0.5rem;
+      background: linear-gradient(135deg, #64C8FF, #FFD93D);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .header-subtitle {
+      font-size: 14px;
+      color: #64C8FF;
+      margin: 0;
+      opacity: 0.8;
+    }
+    
+    .task-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: rgba(100, 200, 255, 0.05);
+      border-radius: 12px;
+      margin-bottom: 8px;
+      border-left: 3px solid #64C8FF;
+    }
+    
+    .task-item input[type="checkbox"] {
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+      accent-color: #64C8FF;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #64C8FF, #4ECDC4);
+      border: 2px solid #64C8FF;
+      border-radius: 12px;
+      padding: 10px 16px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+      color: #0a0e27;
+    }
+    
+    .btn-primary:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 20px rgba(100, 200, 255, 0.4);
+    }
+    
+    .btn-secondary {
+      background: transparent;
+      border: 2px solid rgba(100, 200, 255, 0.3);
+      border-radius: 12px;
+      padding: 10px 16px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+      color: #64C8FF;
+    }
+    
+    .btn-secondary:hover {
+      background: rgba(100, 200, 255, 0.1);
+      transform: scale(1.05);
+    }
+    
+    .input-field {
+      border: 2px solid #64C8FF;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 14px;
+      background: rgba(10, 14, 39, 0.8);
+      color: #fff;
+      transition: border-color 0.2s;
+    }
+    
+    .input-field:focus {
+      outline: none;
+      border-color: #FFD93D;
+      box-shadow: 0 0 10px rgba(255, 217, 61, 0.3);
+    }
+    
+    .input-field::placeholder {
+      color: rgba(255, 255, 255, 0.5);
+    }
+    
+    .question-card {
+      background: rgba(20, 25, 50, 0.6);
+      border-radius: 16px;
+      border: 2px solid #64C8FF;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      backdrop-filter: blur(10px);
+    }
+    
+    .question-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 0.5rem;
+    }
+    
+    .question-asker {
+      font-weight: 600;
+      color: #FFD93D;
+      font-size: 13px;
+    }
+    
+    .question-time {
+      font-size: 12px;
+      color: rgba(100, 200, 255, 0.6);
+    }
+    
+    .question-text {
+      color: #fff;
+      font-size: 14px;
+      margin: 0.5rem 0;
+    }
+    
+    .answer-section {
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(100, 200, 255, 0.2);
+    }
+    
+    .answer-text {
+      color: #4ECDC4;
+      font-size: 13px;
+      background: rgba(78, 205, 196, 0.1);
+      padding: 0.5rem;
+      border-radius: 8px;
+      margin: 0.5rem 0;
+    }
+    
+    .nav-tabs {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 2rem;
+      border-bottom: 2px solid rgba(100, 200, 255, 0.2);
+      padding-bottom: 1rem;
+    }
+    
+    .nav-tab {
+      padding: 8px 16px;
+      border: none;
+      background: transparent;
+      color: #ffffff;
+      cursor: pointer;
+      font-weight: 500;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+    }
+    
+    .nav-tab.active {
+      color: #FFD93D;
+      border-bottom-color: #FFD93D;
+    }
+    
+    .nav-tab:hover {
+      color: #64C8FF;
+    }
+
+    .sync-indicator {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #4ECDC4;
+      margin-left: 8px;
+    }
+
+    .setup-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+
+    .setup-content {
+      background: rgba(20, 25, 50, 0.9);
+      border: 2px solid #64C8FF;
+      border-radius: 24px;
+      padding: 2rem;
+      max-width: 500px;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+<div class="belight-bg">
+  <div style="max-width: 1200px; margin: 0 auto;">
+    
+    <!-- 設定Modal -->
+    <div id="setupModal" class="setup-modal" style="display: none;">
+      <div class="setup-content">
+        <h2 style="font-size: 24px; color: #FFD93D; margin-bottom: 1rem;">初次設定</h2>
+        <p style="color: #64C8FF; margin-bottom: 1rem;">為了讓電腦、手機同步資料，請輸入一個房間碼</p>
+        
+        <input 
+          id="roomCodeSetup" 
+          type="text" 
+          placeholder="輸入房間碼（如：camp2024）"
+          class="input-field"
+          style="width: 100%; margin-bottom: 1rem; box-sizing: border-box;"
+        />
+        
+        <button onclick="initializeRoom()" class="btn-primary" style="width: 100%; margin-bottom: 0.5rem;">確認開始</button>
+        
+        <p style="font-size: 12px; color: rgba(100, 200, 255, 0.6); margin-top: 1rem; text-align: center;">
+          房間碼請保密，分享給營隊成員時用同一個碼就能同步
+        </p>
+      </div>
+    </div>
+    
+    <!-- 登入頁面 -->
+    <div id="loginPage" style="display: none;">
+      <div style="max-width: 400px; margin: 4rem auto;">
+        <div class="pikmin-card" style="border-color: #64C8FF; text-align: center;">
+          <div style="font-size: 64px; margin-bottom: 1rem;">💡</div>
+          <h1 class="header-title">隊長登入</h1>
+          <p class="header-subtitle">輸入密碼進入管理面板</p>
+          
+          <div style="margin: 2rem 0;">
+            <label style="font-size: 14px; color: #64C8FF; display: block; margin-bottom: 8px; font-weight: 500;">密碼</label>
+            <input id="passwordInput" type="password" placeholder="輸入密碼" class="input-field" style="width: 100%; box-sizing: border-box;" />
+          </div>
+          
+          <button onclick="handleLogin()" class="btn-primary" style="width: 100%;">登入</button>
+          
+          <p id="loginError" style="color: #FF6B6B; font-size: 13px; margin: 1rem 0 0; text-align: center; display: none;">密碼錯誤</p>
+          
+          <p style="font-size: 12px; color: #64C8FF; margin: 1.5rem 0 0; text-align: center; opacity: 0.7;">預設密碼：<code style="background: rgba(100, 200, 255, 0.1); padding: 2px 6px; border-radius: 6px;">123456</code></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 使用者模式 -->
+    <div id="userMode">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <div>
+          <h1 class="header-title">✨ Be Light 營會</h1>
+          <p class="header-subtitle">光照黑暗 — 各部門進度追蹤 <span class="sync-indicator" id="syncStatus"></span></p>
+        </div>
+        <button onclick="showLoginPage()" class="btn-secondary">🔐 隊長專用</button>
+      </div>
+
+      <!-- 導航標籤 -->
+      <div class="nav-tabs">
+        <button class="nav-tab active" onclick="switchUserTab('progress')">進度追蹤</button>
+        <button class="nav-tab" onclick="switchUserTab('questions')">❓ 我有問題</button>
+      </div>
+
+      <!-- 進度追蹤頁面 -->
+      <div id="progressTab">
+        <!-- 完成任務卡 -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 2rem;">
+          <div class="pikmin-card" style="border-color: #FFD93D;">
+            <p class="header-subtitle">完成的任務</p>
+            <p id="totalPoints" style="font-size: 36px; font-weight: 600; margin: 8px 0 0; color: #FFD93D;">0</p>
+          </div>
+          <div class="pikmin-card" style="border-color: #64C8FF;">
+            <p class="header-subtitle">總任務數</p>
+            <p id="giftCount" style="font-size: 36px; font-weight: 600; margin: 8px 0 0; color: #64C8FF;">0</p>
+          </div>
+        </div>
+
+        <!-- 部門選擇 -->
+        <div style="margin-bottom: 2rem;">
+          <h2 style="font-size: 20px; font-weight: 600; margin: 0 0 1rem; color: #64C8FF;">各部門進度</h2>
+          <div id="departmentGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px;"></div>
+        </div>
+
+        <!-- 詳細頁面 -->
+        <div id="detailPanel" style="display: none;">
+          <button onclick="closeDepartment()" style="background: transparent; border: none; color: #64C8FF; cursor: pointer; font-size: 14px; margin-bottom: 1.5rem; padding: 0; font-weight: 500;">← 返回</button>
+          
+          <div class="pikmin-card" style="border-color: #64C8FF;">
+            <h2 id="deptName" style="font-size: 24px; font-weight: 600; margin: 0 0 1.5rem; color: #64C8FF;"></h2>
+            
+            <!-- 文件連結 -->
+            <div id="docLinks" style="margin-bottom: 2rem;"></div>
+            
+            <!-- 任務清單 -->
+            <div style="margin-bottom: 2rem;">
+              <h3 style="font-size: 14px; font-weight: 600; color: #64C8FF; margin: 0 0 1rem; text-transform: uppercase; letter-spacing: 0.5px;">✓ 任務清單</h3>
+              <div id="taskList" style="display: flex; flex-direction: column; gap: 8px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 我有問題頁面 -->
+      <div id="questionsTab" style="display: none;">
+        <div class="pikmin-card" style="border-color: #64C8FF; margin-bottom: 2rem;">
+          <h2 style="font-size: 18px; font-weight: 600; margin: 0 0 1rem; color: #64C8FF;">提出你的問題</h2>
+          
+          <input 
+            id="userNameInput" 
+            type="text" 
+            placeholder="你的名字"
+            class="input-field"
+            style="width: 100%; margin-bottom: 8px; box-sizing: border-box;"
+          />
+          
+          <textarea 
+            id="questionInput" 
+            placeholder="問題內容..."
+            class="input-field"
+            style="width: 100%; height: 80px; box-sizing: border-box; margin-bottom: 1rem; resize: vertical;"
+          ></textarea>
+          
+          <button onclick="submitQuestion()" class="btn-primary" style="width: 100%;">送出問題</button>
+        </div>
+
+        <h2 style="font-size: 18px; font-weight: 600; margin: 0 0 1rem; color: #64C8FF;">問題列表</h2>
+        <div id="questionsListUser"></div>
+      </div>
+    </div>
+
+    <!-- 管理員模式 -->
+    <div id="adminMode" style="display: none;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <div>
+          <h1 class="header-title">⚡ 隊長指揮所</h1>
+          <p class="header-subtitle">光照黑暗 — 總召管理面板 <span class="sync-indicator" id="syncStatusAdmin"></span></p>
+        </div>
+        <button onclick="handleLogout()" class="btn-secondary">登出</button>
+      </div>
+
+      <!-- 導航標籤 -->
+      <div class="nav-tabs">
+        <button class="nav-tab active" onclick="switchAdminTab('tasks')">任務管理</button>
+        <button class="nav-tab" onclick="switchAdminTab('questions')">❓ 問題回答</button>
+      </div>
+
+      <!-- 任務管理標籤 -->
+      <div id="tasksTab">
+        <div id="adminDepartments" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1.5rem;"></div>
+      </div>
+
+      <!-- 問題回答標籤 -->
+      <div id="questionsTab" style="display: none;">
+        <div id="adminQuestions"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// Firebase 設定
+const firebaseConfig = {
+  apiKey: "AIzaSyCVL7s9iKgJCfRxF9qK0F2f9K4K4K4K4K4",
+  authDomain: "belight-camp.firebaseapp.com",
+  databaseURL: "https://belight-camp-default-rtdb.firebaseio.com",
+  projectId: "belight-camp",
+  storageBucket: "belight-camp.appspot.com",
+  messagingSenderId: "123456789012",
+  appId: "1:123456789012:web:abcdef1234567890"
+};
+
+// 為了安全和簡便，改用簡單的本地同步
+let roomCode = '';
+let isOnline = true;
+
+const departments = [
+  { id: 1, name: '遊戲組', icon: '🎮' },
+  { id: 2, name: '敬拜組', icon: '🎵' },
+  { id: 3, name: '總務組', icon: '📋' },
+  { id: 4, name: '行政組', icon: '📝' },
+  { id: 5, name: '膳食組', icon: '🍽️' },
+  { id: 6, name: '節目組', icon: '🎭' },
+  { id: 7, name: '牧者招待組', icon: '🤝' },
+  { id: 8, name: '媒體組', icon: '📸' }
+];
+
+const ADMIN_PASSWORD = '123456';
+let isLoggedIn = false;
+let currentDept = null;
+
+let allData = {
+  points: 0,
+  departments: departments.map(dept => ({
+    id: dept.id,
+    name: dept.name,
+    tasks: [],
+    completedCount: 0,
+    documents: [
+      { type: 'controlSheet', label: '管制表', url: '' },
+      { type: 'plan', label: '計畫書', url: '' }
+    ]
+  })),
+  questions: []
+};
+
+function initializeRoom() {
+  roomCode = document.getElementById('roomCodeSetup').value.trim();
+  if (!roomCode) {
+    alert('請輸入房間碼');
+    return;
+  }
+  
+  localStorage.setItem('belight_room_code', roomCode);
+  document.getElementById('setupModal').style.display = 'none';
+  loadData();
+  renderDepartments();
+}
+
+function showLoginPage() {
+  if (isLoggedIn) {
+    document.getElementById('userMode').style.display = 'none';
+    document.getElementById('adminMode').style.display = 'block';
+    renderAdminPanel();
+  } else {
+    document.getElementById('loginPage').style.display = 'block';
+    document.getElementById('userMode').style.display = 'none';
+    document.getElementById('adminMode').style.display = 'none';
+    document.getElementById('passwordInput').focus();
+  }
+}
+
+function handleLogin() {
+  const password = document.getElementById('passwordInput').value;
+  const errorMsg = document.getElementById('loginError');
+  
+  if (password === ADMIN_PASSWORD) {
+    isLoggedIn = true;
+    errorMsg.style.display = 'none';
+    document.getElementById('loginPage').style.display = 'none';
+    document.getElementById('userMode').style.display = 'none';
+    document.getElementById('adminMode').style.display = 'block';
+    document.getElementById('passwordInput').value = '';
+    renderAdminPanel();
+  } else {
+    errorMsg.style.display = 'block';
+    document.getElementById('passwordInput').value = '';
+  }
+}
+
+function handleLogout() {
+  isLoggedIn = false;
+  document.getElementById('adminMode').style.display = 'none';
+  document.getElementById('userMode').style.display = 'block';
+  document.getElementById('loginPage').style.display = 'none';
+}
+
+function switchUserTab(tab) {
+  document.querySelectorAll('#userMode .nav-tab').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  
+  document.getElementById('progressTab').style.display = tab === 'progress' ? 'block' : 'none';
+  document.getElementById('questionsTab').style.display = tab === 'questions' ? 'block' : 'none';
+  
+  if (tab === 'questions') {
+    renderUserQuestions();
+  }
+}
+
+function switchAdminTab(tab) {
+  document.querySelectorAll('#adminMode .nav-tab').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  
+  document.getElementById('tasksTab').style.display = tab === 'tasks' ? 'block' : 'none';
+  const qTabs = document.querySelectorAll('#adminMode #questionsTab');
+  qTabs.forEach(t => t.style.display = tab === 'questions' ? 'block' : 'none');
+  
+  if (tab === 'questions') {
+    renderAdminQuestions();
+  }
+}
+
+function submitQuestion() {
+  const name = document.getElementById('userNameInput').value.trim();
+  const question = document.getElementById('questionInput').value.trim();
+  
+  if (!name || !question) {
+    alert('請填寫名字和問題');
+    return;
+  }
+  
+  allData.questions.push({
+    id: Date.now(),
+    name: name,
+    question: question,
+    answer: '',
+    time: new Date().toLocaleString('zh-TW')
+  });
+  
+  document.getElementById('userNameInput').value = '';
+  document.getElementById('questionInput').value = '';
+  renderUserQuestions();
+  saveData();
+  broadcastUpdate();
+}
+
+function renderUserQuestions() {
+  const container = document.getElementById('questionsListUser');
+  
+  if (allData.questions.length === 0) {
+    container.innerHTML = '<p style="color: #64C8FF; text-align: center;">還沒有任何問題</p>';
+    return;
+  }
+  
+  container.innerHTML = allData.questions.map(q => `
+    <div class="question-card">
+      <div class="question-header">
+        <div class="question-asker">${q.name}</div>
+        <div class="question-time">${q.time}</div>
+      </div>
+      <div class="question-text">❓ ${q.question}</div>
+      ${q.answer ? `
+        <div class="answer-section">
+          <div style="font-size: 12px; color: #4ECDC4; font-weight: 600; margin-bottom: 4px;">✓ 隊長回答：</div>
+          <div class="answer-text">${q.answer}</div>
+        </div>
+      ` : '<div style="color: #64C8FF; font-size: 12px; margin-top: 8px;">⏳ 等待回答中...</div>'}
+    </div>
+  `).join('');
+}
+
+function renderAdminQuestions() {
+  const container = document.getElementById('adminQuestions');
+  
+  if (allData.questions.length === 0) {
+    container.innerHTML = '<p style="color: #64C8FF; text-align: center;">還沒有任何問題</p>';
+    return;
+  }
+  
+  container.innerHTML = allData.questions.map(q => `
+    <div class="question-card">
+      <div class="question-header">
+        <div class="question-asker">${q.name}</div>
+        <div class="question-time">${q.time}</div>
+      </div>
+      <div class="question-text">❓ ${q.question}</div>
+      
+      <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(100, 200, 255, 0.2);">
+        <label style="font-size: 13px; color: #4ECDC4; display: block; margin-bottom: 8px; font-weight: 600;">你的回答：</label>
+        <textarea 
+          id="answerText-${q.id}"
+          class="input-field"
+          style="width: 100%; height: 60px; box-sizing: border-box; margin-bottom: 8px; resize: vertical;"
+          placeholder="輸入回答..."
+          onchange="saveAnswer(${q.id})"
+          onblur="saveAnswer(${q.id})"
+        >${q.answer}</textarea>
+        <p style="font-size: 11px; color: #4ECDC4; margin: 0; opacity: 0.7;">✓ 自動儲存</p>
+      </div>
+    </div>
+  `).join('');
+}
+
+function saveAnswer(questionId) {
+  const answerText = document.getElementById(`answerText-${questionId}`).value.trim();
+  const q = allData.questions.find(qu => qu.id === questionId);
+  
+  if (q) {
+    q.answer = answerText;
+    saveData();
+    broadcastUpdate();
+    renderAdminQuestions();
+  }
+}
+
+function renderAdminPanel() {
+  const container = document.getElementById('adminDepartments');
+  container.innerHTML = allData.departments.map(dept => {
+    const deptInfo = departments.find(d => d.id === dept.id);
+    return `
+      <div class="pikmin-card" style="border-color: #64C8FF;">
+        <h3 style="font-size: 18px; font-weight: 600; margin: 0 0 1rem; color: #FFD93D;">
+          ${deptInfo.icon} ${dept.name}
+        </h3>
+        
+        <!-- 文件連結管理 -->
+        <div style="margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid rgba(100, 200, 255, 0.2);">
+          <p style="font-size: 12px; font-weight: 600; color: #64C8FF; margin: 0 0 8px; text-transform: uppercase;">📄 文件連結</p>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <input 
+              id="docLink-${dept.id}-0"
+              type="text" 
+              placeholder="管制表連結 URL"
+              class="input-field"
+              value="${dept.documents[0].url}"
+              onchange="updateDocLink(${dept.id}, 0)"
+              onblur="updateDocLink(${dept.id}, 0)"
+              style="width: 100%; box-sizing: border-box; font-size: 12px;"
+            />
+            <input 
+              id="docLink-${dept.id}-1"
+              type="text" 
+              placeholder="計畫書連結 URL"
+              class="input-field"
+              value="${dept.documents[1].url}"
+              onchange="updateDocLink(${dept.id}, 1)"
+              onblur="updateDocLink(${dept.id}, 1)"
+              style="width: 100%; box-sizing: border-box; font-size: 12px;"
+            />
+          </div>
+        </div>
+        
+        <!-- 現有任務 -->
+        <div style="margin-bottom: 1.5rem;">
+          <p style="font-size: 12px; font-weight: 600; color: #64C8FF; margin: 0 0 8px; text-transform: uppercase;">✓ 任務清單 (${dept.tasks.length})</p>
+          <div style="max-height: 180px; overflow-y: auto; margin-bottom: 1rem;">
+            ${dept.tasks.length === 0 ? 
+              '<p style="font-size: 13px; color: #64C8FF; margin: 0; opacity: 0.7;">尚無任務</p>' :
+              dept.tasks.map((task, idx) => `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(100, 200, 255, 0.1); font-size: 13px; color: #fff;">
+                  <span>${task.name}</span>
+                  <button onclick="deleteAdminTask(${dept.id}, ${idx})" style="background: transparent; border: none; color: #FF6B6B; cursor: pointer; font-size: 12px;">✕</button>
+                </div>
+              `).join('')
+            }
+          </div>
+        </div>
+        
+        <!-- 新增任務 -->
+        <div style="display: flex; gap: 8px;">
+          <input 
+            id="adminTaskInput-${dept.id}"
+            type="text" 
+            placeholder="新增任務..."
+            class="input-field"
+            style="flex: 1; font-size: 13px;"
+          />
+          <button 
+            onclick="addAdminTask(${dept.id})"
+            class="btn-primary"
+            style="font-size: 13px; padding: 10px 12px;"
+          >+</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function addAdminTask(deptId) {
+  const dept = allData.departments.find(d => d.id === deptId);
+  const input = document.getElementById(`adminTaskInput-${deptId}`);
+  const taskName = input.value.trim();
+  
+  if (!taskName) return;
+  
+  dept.tasks.push({ name: taskName, completed: false });
+  input.value = '';
+  renderAdminPanel();
+  saveData();
+  broadcastUpdate();
+}
+
+function updateDocLink(deptId, docIdx) {
+  const input = document.getElementById(`docLink-${deptId}-${docIdx}`);
+  const dept = allData.departments.find(d => d.id === deptId);
+  if (dept && input) {
+    dept.documents[docIdx].url = input.value;
+    saveData();
+    broadcastUpdate();
+  }
+}
+
+function deleteAdminTask(deptId, taskIdx) {
+  const dept = allData.departments.find(d => d.id === deptId);
+  const task = dept.tasks[taskIdx];
+  
+  if (task.completed) {
+    allData.points--;
+    dept.completedCount--;
+  }
+  
+  dept.tasks.splice(taskIdx, 1);
+  updateAllProgress();
+  renderAdminPanel();
+  saveData();
+  broadcastUpdate();
+}
+
+function renderDepartments() {
+  const grid = document.getElementById('departmentGrid');
+  grid.innerHTML = departments.map(dept => {
+    const deptData = allData.departments.find(d => d.id === dept.id);
+    return `
+      <div onclick="openDepartment(${dept.id})" class="pikmin-card dept-card" style="border-color: #64C8FF;">
+        <div class="dept-icon">${dept.icon}</div>
+        <div style="font-size: 15px; font-weight: 600; color: #FFD93D; margin-bottom: 8px;">${dept.name}</div>
+        <div style="font-size: 12px; color: #64C8FF;" id="progress-${dept.id}">0 / 0</div>
+      </div>
+    `;
+  }).join('');
+  updateAllProgress();
+}
+
+function openDepartment(deptId) {
+  currentDept = deptId;
+  const dept = allData.departments.find(d => d.id === deptId);
+  const deptInfo = departments.find(d => d.id === deptId);
+  
+  document.getElementById('detailPanel').style.display = 'block';
+  document.getElementById('departmentGrid').parentElement.style.display = 'none';
+  document.getElementById('deptName').textContent = `${deptInfo.icon} ${deptInfo.name}`;
+  
+  const docLinks = document.getElementById('docLinks');
+  const hasLinks = dept.documents.some(doc => doc.url);
+  if (hasLinks) {
+    docLinks.innerHTML = `
+      <div style="margin-bottom: 1.5rem;">
+        <h3 style="font-size: 12px; font-weight: 600; color: #64C8FF; margin: 0 0 8px; text-transform: uppercase;">📄 重要文件</h3>
+        <div class="link-section">
+          ${dept.documents.map(doc => doc.url ? `
+            <a href="${doc.url}" target="_blank" class="doc-link" onclick="event.stopPropagation();">
+              ${doc.type === 'controlSheet' ? '📊' : '📋'} ${doc.label}
+            </a>
+          ` : '').join('')}
+        </div>
+      </div>
+    `;
+  } else {
+    docLinks.innerHTML = '';
+  }
+  
+  renderTasks();
+}
+
+function closeDepartment() {
+  currentDept = null;
+  document.getElementById('detailPanel').style.display = 'none';
+  document.getElementById('departmentGrid').parentElement.style.display = 'block';
+}
+
+function renderTasks() {
+  const dept = allData.departments.find(d => d.id === currentDept);
+  const taskList = document.getElementById('taskList');
+  
+  if (dept.tasks.length === 0) {
+    taskList.innerHTML = '<p style="color: #64C8FF; font-size: 14px; margin: 0; opacity: 0.7;">還沒有任務</p>';
+    return;
+  }
+  
+  taskList.innerHTML = dept.tasks.map((task, idx) => `
+    <div class="task-item">
+      <input 
+        type="checkbox" 
+        ${task.completed ? 'checked' : ''}
+        onchange="toggleTask(${idx})"
+      />
+      <span style="flex: 1; font-size: 14px; color: #fff; ${task.completed ? 'text-decoration: line-through; opacity: 0.5;' : ''}">
+        ${task.name}
+      </span>
+    </div>
+  `).join('');
+}
+
+function toggleTask(taskIdx) {
+  const dept = allData.departments.find(d => d.id === currentDept);
+  dept.tasks[taskIdx].completed = !dept.tasks[taskIdx].completed;
+  
+  if (dept.tasks[taskIdx].completed) {
+    allData.points++;
+    dept.completedCount++;
+  } else {
+    allData.points--;
+    dept.completedCount--;
+  }
+  
+  updateAllProgress();
+  renderTasks();
+  saveData();
+  broadcastUpdate();
+}
+
+function updateAllProgress() {
+  const totalTasks = allData.departments.reduce((sum, dept) => sum + dept.tasks.length, 0);
+  const completedTasks = allData.departments.reduce((sum, dept) => sum + dept.completedCount, 0);
+  
+  allData.departments.forEach(dept => {
+    const progress = document.getElementById(`progress-${dept.id}`);
+    if (progress) {
+      progress.textContent = `${dept.completedCount} / ${dept.tasks.length}`;
+    }
+  });
+  
+  document.getElementById('totalPoints').textContent = completedTasks;
+  document.getElementById('giftCount').textContent = totalTasks;
+}
+
+function saveData() {
+  if (roomCode) {
+    localStorage.setItem(`belight_camp_${roomCode}`, JSON.stringify(allData));
+  }
+}
+
+function loadData() {
+  if (roomCode) {
+    const saved = localStorage.getItem(`belight_camp_${roomCode}`);
+    if (saved) {
+      allData = JSON.parse(saved);
+      updateAllProgress();
+    }
+  }
+}
+
+function broadcastUpdate() {
+  // 廣播給同個房間的其他標籤頁
+  localStorage.setItem(`belight_broadcast_${roomCode}`, JSON.stringify({
+    timestamp: Date.now(),
+    data: allData
+  }));
+}
+
+window.addEventListener('storage', (e) => {
+  if (e.key === `belight_broadcast_${roomCode}`) {
+    const newData = JSON.parse(e.newValue).data;
+    allData = newData;
+    
+    if (document.getElementById('userMode').style.display !== 'none') {
+      renderDepartments();
+      renderUserQuestions();
+    }
+    
+    if (document.getElementById('adminMode').style.display !== 'none') {
+      renderAdminPanel();
+      renderAdminQuestions();
+    }
+    
+    updateAllProgress();
+  }
+});
+
+window.onload = function() {
+  roomCode = localStorage.getItem('belight_room_code');
+  
+  if (!roomCode) {
+    document.getElementById('setupModal').style.display = 'flex';
+  } else {
+    loadData();
+    renderDepartments();
+  }
+};
+</script>
+</body>
+</html>
